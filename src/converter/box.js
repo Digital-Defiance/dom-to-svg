@@ -1,5 +1,10 @@
 import { shapeElement, renderBorders } from "./borders.js";
-import { formatSvgFontFamily, resolveSvgFontFamily } from "./fonts.js";
+import {
+  formatSvgFontFamily,
+  rasterizeTextLine,
+  resolveSvgFontFamily,
+  shouldRasterizeText,
+} from "./fonts.js";
 import { backgroundLayers, renderBackgroundLayers } from "./gradients.js";
 import {
   getBorderRadii,
@@ -142,8 +147,9 @@ export function splitShadows(shadow) {
 
 /**
  * Render ::before / ::after as an extra box + optional text content.
+ * @param {{ rasterizeFonts?: boolean }} [options]
  */
-export function renderPseudo(el, which, rootRect, defs) {
+export function renderPseudo(el, which, rootRect, defs, options = {}) {
   const style = window.getComputedStyle(el, which);
   const content = style.content;
   if (!content || content === "none" || content === "normal") return "";
@@ -191,6 +197,25 @@ export function renderPseudo(el, which, rootRect, defs) {
   if (text) {
     const box = relativeBox(fakeRect, rootRect);
     const fontSize = parseLength(style.fontSize) || 16;
+    const family = resolveSvgFontFamily(style);
+    if (options.rasterizeFonts && shouldRasterizeText(text, style, family)) {
+      const img = rasterizeTextLine(
+        {
+          text,
+          x: fakeRect.left,
+          y: fakeRect.top,
+          width: fakeRect.width || fontSize,
+          height: fakeRect.height || fontSize * 1.4,
+        },
+        style,
+        rootRect,
+        family
+      );
+      if (img) {
+        parts.push(img);
+        return parts.join("");
+      }
+    }
     parts.push(
       tag(
         "text",
@@ -199,7 +224,7 @@ export function renderPseudo(el, which, rootRect, defs) {
           y: box.y + fontSize * 0.8,
           fill: style.color || "#000",
           "font-size": fontSize,
-          "font-family": formatSvgFontFamily(resolveSvgFontFamily(style)),
+          "font-family": formatSvgFontFamily(family),
           "font-weight": style.fontWeight || "normal",
         },
         escapeXml(text)

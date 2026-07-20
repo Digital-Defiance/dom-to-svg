@@ -47,3 +47,11 @@ describe("resolveSvgFontFamily", () => {
     expect(family).toBe("IBM Plex Sans");
   });
 });
+
+describe("textHasFallbackProneGlyphs", () => {
+  it("detects chess symbols", async () => {
+    const { textHasFallbackProneGlyphs } = await import("../../src/converter/fonts.js");
+    expect(textHasFallbackProneGlyphs("♔")).toBe(true);
+    expect(textHasFallbackProneGlyphs("Hello")).toBe(false);
+  });
+});

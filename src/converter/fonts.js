@@ -159,6 +159,29 @@ export function textUsesFontFallback(text, style, family) {
   return Math.abs(fullW - aloneW) > 0.75;
 }
 
+/** Chess / symbols / PUA — often system-fallback glyphs Illustrator cannot resolve. */
+export function textHasFallbackProneGlyphs(text) {
+  if (!text) return false;
+  for (const ch of text) {
+    const cp = ch.codePointAt(0);
+    if (cp >= 0x2190 && cp <= 0x21FF) return true; // arrows
+    if (cp >= 0x2300 && cp <= 0x23FF) return true; // misc technical
+    if (cp >= 0x2460 && cp <= 0x24FF) return true; // enclosed alphanumerics
+    if (cp >= 0x2600 && cp <= 0x27BF) return true; // misc symbols + dingbats (chess)
+    if (cp >= 0x2B00 && cp <= 0x2BFF) return true; // misc symbols and arrows
+    if (cp >= 0xE000 && cp <= 0xF8FF) return true; // PUA
+    if (cp >= 0x1F000 && cp <= 0x1FFFF) return true; // chess ext, cards, emoji…
+  }
+  return false;
+}
+
+/**
+ * Whether this run should become an <image> when rasterizeFonts is enabled.
+ */
+export function shouldRasterizeText(text, style, family) {
+  return textUsesFontFallback(text, style, family) || textHasFallbackProneGlyphs(text);
+}
+
 /**
  * Rasterize a text line as an SVG <image> so Illustrator does not need the glyph font.
  * Coordinates are viewport-space; converted relative to rootRect.

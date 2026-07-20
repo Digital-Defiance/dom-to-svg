@@ -2,7 +2,7 @@ import {
   formatSvgFontFamily,
   rasterizeTextLine,
   resolveSvgFontFamily,
-  textUsesFontFallback,
+  shouldRasterizeText,
 } from "./fonts.js";
 import { escText, parseLength, tag } from "./utils.js";
 
@@ -70,8 +70,9 @@ function overlapsLine(a, b) {
 
 /**
  * Convert text node to SVG <text> elements (one per visual line).
+ * @param {{ rasterizeFonts?: boolean }} [options]
  */
-export function renderTextNode(textNode, style, rootRect) {
+export function renderTextNode(textNode, style, rootRect, options = {}) {
   const lines = measureTextLinesFast(textNode);
   if (!lines.length) return "";
 
@@ -96,8 +97,7 @@ export function renderTextNode(textNode, style, rootRect) {
     const displayText = applyTextTransform(content, style.textTransform);
     const lineForPaint = { ...line, text: displayText };
 
-    // Glyphs that came from a fallback face (chess symbols, etc.) → raster for Illustrator
-    if (textUsesFontFallback(displayText, style, fontFamily)) {
+    if (options.rasterizeFonts && shouldRasterizeText(displayText, style, fontFamily)) {
       const img = rasterizeTextLine(lineForPaint, style, rootRect, fontFamily);
       if (img) {
         parts.push(img);
@@ -224,8 +224,9 @@ function round(n) {
 
 /**
  * Render text for replaced form controls.
+ * @param {{ rasterizeFonts?: boolean }} [options]
  */
-export function renderReplacedText(el, style, rootRect) {
+export function renderReplacedText(el, style, rootRect, options = {}) {
   const tagName = el.tagName.toLowerCase();
   let value = "";
   if (tagName === "input") {
@@ -256,7 +257,7 @@ export function renderReplacedText(el, style, rootRect) {
   const y = rect.top - rootRect.top + padT + fontSize * 0.8;
 
   const family = resolveSvgFontFamily(style);
-  if (textUsesFontFallback(value, style, family)) {
+  if (options.rasterizeFonts && shouldRasterizeText(value, style, family)) {
     const img = rasterizeTextLine(
       { text: value, x: rect.left + padL, y: rect.top + padT, width: rect.width, height: rect.height },
       style,
@@ -284,8 +285,9 @@ export function renderReplacedText(el, style, rootRect) {
 
 /**
  * Render ::marker for list items.
+ * @param {{ rasterizeFonts?: boolean }} [options]
  */
-export function renderMarker(el, rootRect) {
+export function renderMarker(el, rootRect, options = {}) {
   const style = window.getComputedStyle(el, "::marker");
   const content = style.content;
   let text = "";
@@ -317,6 +319,22 @@ export function renderMarker(el, rootRect) {
   const y = rect.top - rootRect.top + fontSize * 0.8;
 
   const family = resolveSvgFontFamily(style);
+  if (options.rasterizeFonts && shouldRasterizeText(text, style, family)) {
+    const img = rasterizeTextLine(
+      {
+        text,
+        x: rect.left - fontSize * 1.2,
+        y: rect.top,
+        width: fontSize * 1.5,
+        height: fontSize * 1.4,
+      },
+      style,
+      rootRect,
+      family
+    );
+    if (img) return img;
+  }
+
   return tag(
     "text",
     {

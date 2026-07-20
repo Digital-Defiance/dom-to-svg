@@ -2,6 +2,7 @@ import { elementToSvg } from "./converter/index.js";
 
 const STATE_KEY = "__domToSvgInspect";
 const ATTR = "data-dom-to-svg";
+const RASTERIZE_STORAGE_KEY = "dom-to-svg:rasterizeFonts";
 
 /**
  * Toggle DevTools-style inspect mode.
@@ -44,6 +45,7 @@ function start() {
   };
 
   state.onMove = (e) => {
+    if (isHintEvent(e)) return;
     const t = pickTarget(e);
     if (!t || t === state.selected) return;
     state.selected = t;
@@ -56,17 +58,25 @@ function start() {
   window.addEventListener("resize", state.onScroll, true);
 
   state.onClick = async (e) => {
+    if (isHintEvent(e)) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
 
     const target = state.selected || pickTarget(e);
+    const rasterizeFonts = readRasterizeFonts(state.hint);
     teardown();
     if (!target) return;
 
     const toast = showToast("dom-to-svg: converting…");
     try {
-      const svg = await elementToSvg(target);
+      const svg = await elementToSvg(target, { rasterizeFonts });
       await exportSvg(svg, target);
       toast.textContent = "dom-to-svg: copied & downloaded";
       setTimeout(() => toast.remove(), 2200);
@@ -211,15 +221,83 @@ function createHint() {
     font: "11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace",
     padding: "8px 12px",
     borderRadius: "4px",
-    pointerEvents: "none",
+    pointerEvents: "auto",
+    cursor: "default",
     boxShadow: "0 4px 24px rgba(0,0,0,.4)",
     border: "1px solid #333",
     whiteSpace: "nowrap",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
   });
-  el.innerHTML =
+
+  const label = document.createElement("span");
+  label.innerHTML =
     `<span style="color:#ce9178">dom-to-svg</span> · click / Enter convert · ` +
     `<span style="color:#dcdcaa">↑</span> parent · <span style="color:#dcdcaa">↓</span> child · Esc`;
+
+  const toggle = document.createElement("label");
+  Object.assign(toggle.style, {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "5px",
+    color: "#ce9178",
+    cursor: "pointer",
+    userSelect: "none",
+    borderLeft: "1px solid #333",
+    paddingLeft: "10px",
+    margin: "0",
+  });
+  toggle.title = "Rasterize fallback glyphs (chess symbols, icons) for Illustrator";
+
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.setAttribute(ATTR, "rasterize-fonts");
+  input.checked = loadRasterizeFontsPref();
+  Object.assign(input.style, {
+    margin: "0",
+    accentColor: "#ce9178",
+    cursor: "pointer",
+  });
+  input.addEventListener("change", () => {
+    saveRasterizeFontsPref(input.checked);
+  });
+
+  const text = document.createElement("span");
+  text.textContent = "rasterize fonts";
+
+  toggle.append(input, text);
+  el.append(label, toggle);
   return el;
+}
+
+function isHintEvent(e) {
+  const t = e.target;
+  if (!(t instanceof Element)) return false;
+  return Boolean(t.closest(`[${ATTR}="hint"]`));
+}
+
+function readRasterizeFonts(hint) {
+  const input = hint?.querySelector?.(`input[${ATTR}="rasterize-fonts"]`);
+  const checked = Boolean(input?.checked);
+  saveRasterizeFontsPref(checked);
+  return checked;
+}
+
+function loadRasterizeFontsPref() {
+  try {
+    return localStorage.getItem(RASTERIZE_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function saveRasterizeFontsPref(on) {
+  try {
+    localStorage.setItem(RASTERIZE_STORAGE_KEY, on ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
 }
 
 function paintTarget(state, el) {

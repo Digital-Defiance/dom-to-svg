@@ -24,7 +24,7 @@ import {
  * Convert a DOM element subtree into a standalone SVG string (true vector mapping).
  *
  * @param {Element} root
- * @param {{ embedFonts?: boolean, expandOverflow?: boolean }} [options]
+ * @param {{ embedFonts?: boolean, expandOverflow?: boolean, rasterizeFonts?: boolean }} [options]
  * @returns {Promise<string>}
  */
 export async function elementToSvg(root, options = {}) {
@@ -50,7 +50,7 @@ export async function elementToSvg(root, options = {}) {
 
     const defs = [];
     const tree = buildPaintTree(root);
-    const body = tree ? await renderPaintNode(tree, captureRect, defs, true) : "";
+    const body = tree ? await renderPaintNode(tree, captureRect, defs, true, options) : "";
 
     if (options.embedFonts !== false) {
       const fontCss = await collectFontFaces(root);
@@ -86,7 +86,7 @@ export async function elementToSvg(root, options = {}) {
  * Transform wraps ONLY this element's own chrome — children keep absolute
  * viewport coordinates that already include ancestor CSS transforms.
  */
-async function renderPaintNode(node, rootRect, defs, isRoot = false) {
+async function renderPaintNode(node, rootRect, defs, isRoot = false, options = {}) {
   const { el, style, children } = node;
   if (!isRoot && shouldSkipElement(el, style)) return "";
 
@@ -115,10 +115,10 @@ async function renderPaintNode(node, rootRect, defs, isRoot = false) {
   const ownChunks = [];
 
   if (pseudoExists(el, "::before")) {
-    ownChunks.push(renderPseudo(el, "::before", rootRect, defs));
+    ownChunks.push(renderPseudo(el, "::before", rootRect, defs, options));
   }
   if (markerExists(el)) {
-    ownChunks.push(renderMarker(el, rootRect));
+    ownChunks.push(renderMarker(el, rootRect, options));
   }
 
   if (tagName === "svg") {
@@ -137,12 +137,12 @@ async function renderPaintNode(node, rootRect, defs, isRoot = false) {
       } else if (tagName === "video") {
         ownChunks.push(renderVideo(el, rootRect));
       } else if (tagName === "input" || tagName === "textarea" || tagName === "button") {
-        ownChunks.push(renderReplacedText(el, style, rootRect));
+        ownChunks.push(renderReplacedText(el, style, rootRect, options));
         if (tagName === "input") ownChunks.push(renderInputDecoration(el, style, rootRect));
       } else {
         for (const child of el.childNodes) {
           if (child.nodeType === Node.TEXT_NODE) {
-            ownChunks.push(renderTextNode(child, style, rootRect));
+            ownChunks.push(renderTextNode(child, style, rootRect, options));
           }
         }
       }
@@ -151,7 +151,7 @@ async function renderPaintNode(node, rootRect, defs, isRoot = false) {
     }
 
     if (pseudoExists(el, "::after")) {
-      ownChunks.push(renderPseudo(el, "::after", rootRect, defs));
+      ownChunks.push(renderPseudo(el, "::after", rootRect, defs, options));
     }
   }
 
@@ -169,7 +169,7 @@ async function renderPaintNode(node, rootRect, defs, isRoot = false) {
   const childChunks = [];
   if (tagName !== "svg") {
     for (const child of children) {
-      childChunks.push(await renderPaintNode(child, rootRect, defs, false));
+      childChunks.push(await renderPaintNode(child, rootRect, defs, false, options));
     }
   }
 

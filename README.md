@@ -16,9 +16,12 @@ npm run build
    - Click the **dom-to-svg** toolbar icon (pin it from the puzzle menu if needed)
    - Or right-click the page → **Convert to SVG…**
 5. Hover to highlight · click / Enter to convert · ↑ parent · ↓ child · **Esc** cancels
+   - Optional: enable **rasterize fonts** on the hint bar (persists) to bake fallback glyphs (e.g. ♔) into images for Illustrator
 6. SVG is downloaded and copied to the clipboard
 
 After editing `src/`, run `npm run build` (or `npm run build:watch`) and **Reload** the extension.
+
+API option: `elementToSvg(el, { rasterizeFonts: true })`.
 
 ## Tests
 
