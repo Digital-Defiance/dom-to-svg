@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "dom-to-svg",
+  "version": "0.1.0",
+  "description": "Inspect a DOM element and convert it to a true-vector SVG.",
+  "permissions": ["activeTab", "scripting", "clipboardWrite", "contextMenus"],
+  "action": {
+    "default_title": "dom-to-svg — click to inspect",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  }
+}
