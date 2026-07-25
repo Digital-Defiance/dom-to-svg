@@ -23,6 +23,22 @@ After editing `src/`, run `npm run build` (or `npm run build:watch`) and **Reloa
 
 API option: `elementToSvg(el, { rasterizeFonts: true })`.
 
+## Store package
+
+```bash
+yarn pack:store
+# or: npm run pack:store
+```
+
+Creates `dom-to-svg-<version>.zip` for Chrome Web Store / Edge Add-ons. Contents are allowlisted:
+
+- `manifest.json`
+- `icons/icon{16,48,128}.png`
+- `src/background.js`
+- `dist/inject.js` (required at runtime — the worker injects this bundle)
+
+Does **not** include `assets/`, tests, or converter source. Bare `yarn pack` / `npm pack` build an unrelated npm `.tgz`; use `pack:store`.
+
 ## Tests
 
 ```bash
@@ -44,6 +60,7 @@ Uses the browser’s layout engine (`getBoundingClientRect`, `getComputedStyle`)
 | per-corner `border-radius` | arc `<path>` |
 | borders | stroke or evenodd ring |
 | wrapped text | `<text>` via Range line boxes |
+| `-webkit-text-stroke` / `paint-order` | SVG `stroke` + `stroke-width` + `paint-order` on `<text>` |
 | `linear-gradient` / `radial-gradient` | paint servers (multi-layer) |
 | `clip-path` | `<clipPath>` |
 | `transform` | SVG `matrix(...)` around transform-origin |

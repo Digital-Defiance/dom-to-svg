@@ -1,4 +1,6 @@
 dist/
+dom-to-svg-*.zip
+*.tgz
 node_modules/
 test-results/
 playwright-report/

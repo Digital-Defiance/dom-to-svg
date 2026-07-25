@@ -1,12 +1,19 @@
 {
   "name": "dom-to-svg",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Inspect a DOM element and convert it to a true-vector SVG",
+  "files": [
+    "manifest.json",
+    "icons/",
+    "src/background.js",
+    "dist/inject.js"
+  ],
   "scripts": {
     "build": "esbuild src/inject.js --bundle --format=iife --target=es2022 --outfile=dist/inject.js",
     "build:watch": "npm run build -- --watch",
+    "pack:store": "node scripts/pack.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "vitest run tests/unit",
