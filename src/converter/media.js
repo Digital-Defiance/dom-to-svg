@@ -1,6 +1,7 @@
 import { relativeBox, tag, uid, escAttr } from "./utils.js";
 import { getBorderRadii } from "./utils.js";
 import { shapeElement } from "./borders.js";
+import { maybeCssDropShadowFilter } from "./box.js";
 
 /**
  * <img> → SVG <image>. Prefer inlining as data URL to avoid CORS taint
@@ -40,7 +41,11 @@ export async function renderImage(el, rootRect, defs) {
         ? "xMidYMid meet"
         : "none";
 
-  return tag("image", {
+  // Apply drop-shadow on a wrapping <g> so clip-path on the image does not
+  // eat the silhouette outline (CSS filter paints outside the border box).
+  const filterUrl = maybeCssDropShadowFilter(style, defs);
+
+  let markup = tag("image", {
     href,
     x: box.x,
     y: box.y,
@@ -50,6 +55,11 @@ export async function renderImage(el, rootRect, defs) {
     ...(anyR ? { "clip-path": `url(#${clipId})` } : {}),
     ...(opacity ? { opacity } : {}),
   });
+
+  if (filterUrl) {
+    markup = tag("g", { filter: filterUrl }, markup);
+  }
+  return markup;
 }
 
 /**
