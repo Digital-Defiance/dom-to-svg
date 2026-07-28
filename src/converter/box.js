@@ -6,6 +6,7 @@ import {
   shouldRasterizeText,
 } from "./fonts.js";
 import { backgroundLayers, renderBackgroundLayers } from "./gradients.js";
+import { parseMatrix } from "./transform.js";
 import {
   getBorderRadii,
   isTransparent,
@@ -147,6 +148,9 @@ export function splitShadows(shadow) {
 
 /**
  * Render ::before / ::after as an extra box + optional text content.
+ * Honors absolute/relative insets, margins, and pure CSS translate transforms
+ * (e.g. `left/top: 50%; margin: -5px` or `transform: translate(-50%, -50%)`
+ * used for centered move-hint dots).
  * @param {{ rasterizeFonts?: boolean }} [options]
  */
 export function renderPseudo(el, which, rootRect, defs, options = {}) {
@@ -172,19 +176,50 @@ export function renderPseudo(el, which, rootRect, defs, options = {}) {
     bottom: 0,
   };
 
+  const marginLeft = parseLength(style.marginLeft, parentRect.width);
+  const marginTop = parseLength(style.marginTop, parentRect.height);
+  const marginRight = parseLength(style.marginRight, parentRect.width);
+  const marginBottom = parseLength(style.marginBottom, parentRect.height);
+
   if (style.position === "absolute" || style.position === "relative") {
     const top = style.top !== "auto" ? parseLength(style.top, parentRect.height) : 0;
     const left = style.left !== "auto" ? parseLength(style.left, parentRect.width) : 0;
     const right = style.right !== "auto" ? parseLength(style.right, parentRect.width) : null;
     const bottom = style.bottom !== "auto" ? parseLength(style.bottom, parentRect.height) : null;
-    fakeRect.left += left;
-    fakeRect.top += top;
-    if (right != null && style.left === "auto") {
-      fakeRect.left = parentRect.right - right - fakeRect.width;
+
+    // CSS absolute: `left`/`top` position the margin edge; then margin inset
+    // the border box (negative margins pull the hint dots onto cell center).
+    if (style.left !== "auto") {
+      fakeRect.left = parentRect.left + left + marginLeft;
+    } else if (right != null) {
+      fakeRect.left = parentRect.right - right - fakeRect.width - marginRight;
+    } else {
+      fakeRect.left += marginLeft;
     }
-    if (bottom != null && style.top === "auto") {
-      fakeRect.top = parentRect.bottom - bottom - fakeRect.height;
+
+    if (style.top !== "auto") {
+      fakeRect.top = parentRect.top + top + marginTop;
+    } else if (bottom != null) {
+      fakeRect.top = parentRect.bottom - bottom - fakeRect.height - marginBottom;
+    } else {
+      fakeRect.top += marginTop;
     }
+  } else {
+    fakeRect.left += marginLeft;
+    fakeRect.top += marginTop;
+  }
+
+  // Pure translate (incl. translate(-50%, -50%) centering) — apply tx/ty.
+  const matrix = parseMatrix(style.transform);
+  if (
+    matrix &&
+    Math.abs(matrix.a - 1) < 1e-6 &&
+    Math.abs(matrix.d - 1) < 1e-6 &&
+    Math.abs(matrix.b) < 1e-6 &&
+    Math.abs(matrix.c) < 1e-6
+  ) {
+    fakeRect.left += matrix.e;
+    fakeRect.top += matrix.f;
   }
 
   if (fakeRect.width <= 0 && fakeRect.height <= 0 && !text) return "";
