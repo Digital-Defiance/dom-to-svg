@@ -14,7 +14,7 @@ import {
   matrixToSvg,
   parseTransformOrigin,
 } from "../../src/converter/transform.js";
-import { splitShadows } from "../../src/converter/box.js";
+import { splitShadows, parseCssDropShadows } from "../../src/converter/box.js";
 import { formatListMarker } from "../../src/converter/text.js";
 
 describe("gradient parsing", () => {
@@ -110,6 +110,32 @@ describe("box-shadow split", () => {
     expect(shadows[0].dx).toBe(2);
     expect(shadows[0].inset).toBe(false);
     expect(shadows[1].inset).toBe(true);
+  });
+});
+
+describe("css drop-shadow filter", () => {
+  it("parses stacked drop-shadows with leading color", () => {
+    const shadows = parseCssDropShadows(
+      "drop-shadow(rgba(244, 236, 232, 0.98) 0px 0px 0.55px) drop-shadow(rgba(244, 236, 232, 0.9) 0px 0px 1.1px)"
+    );
+    expect(shadows).toHaveLength(2);
+    expect(shadows[0].dx).toBe(0);
+    expect(shadows[0].dy).toBe(0);
+    expect(shadows[0].blur).toBe(0.55);
+    expect(shadows[0].color).toMatch(/rgba\(244,\s*236,\s*232,\s*0\.98\)/);
+    expect(shadows[1].blur).toBe(1.1);
+  });
+
+  it("parses drop-shadow with trailing color", () => {
+    const shadows = parseCssDropShadows("drop-shadow(0px 0px 1px #f4ece8)");
+    expect(shadows).toHaveLength(1);
+    expect(shadows[0].blur).toBe(1);
+    expect(shadows[0].color.toLowerCase()).toBe("#f4ece8");
+  });
+
+  it("returns empty for none / unrelated filters", () => {
+    expect(parseCssDropShadows("none")).toEqual([]);
+    expect(parseCssDropShadows("blur(4px)")).toEqual([]);
   });
 });
 
