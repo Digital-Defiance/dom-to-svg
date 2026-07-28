@@ -1,6 +1,6 @@
 {
   "name": "dom-to-svg",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "type": "module",
   "description": "Inspect a DOM element and convert it to a true-vector SVG",
